@@ -5,11 +5,10 @@ using UnityEngine;
 public class Movement : MonoBehaviour
 {
     public float speed;
-    Rigidbody rb;
+    public Rigidbody rb;
 
     void Start()
-    {
-        rb = GetComponent<Rigidbody>();
+    {;
     }
 
     void Update()
