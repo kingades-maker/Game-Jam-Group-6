@@ -20,8 +20,8 @@ public class Movement : MonoBehaviour
     void Move()
     {
       float h_input = Input.GetAxis("Horizontal") * speed;
-        float v_input = Input.GetAxis("Vertical") * speed;
-      rb.velocity = new Vector3(v_input, rb.velocity.y, h_input);
+        float v_input = Input.GetAxis("Vertical") * -speed;
+      rb.linearVelocity = new Vector3(v_input, rb.linearVelocity.y, h_input);
       
     }
 }
