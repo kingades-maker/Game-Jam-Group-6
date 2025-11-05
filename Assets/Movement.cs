@@ -21,7 +21,7 @@ public class Movement : MonoBehaviour
     {
       float h_input = Input.GetAxis("Horizontal") * speed;
         float v_input = Input.GetAxis("Vertical") * speed;
-      rb.linearVelocity = new Vector3(v_input, rb.linearVelocity.y, h_input);
+        rb.linearVelocity = new Vector3(v_input, rb.linearVelocity.y, -h_input);
       
     }
 }
