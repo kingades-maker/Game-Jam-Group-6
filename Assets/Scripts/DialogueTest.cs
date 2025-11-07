@@ -4,226 +4,210 @@ using System.Collections;
 
 public class DialogueTest : MonoBehaviour
 {
-    [Header("UI References")]
     public TextMeshProUGUI dialogueText;
     public GameObject dialogueBox;
-    public GameObject DialogueButton1;
-    public GameObject DialogueButton2;
-
-    [Header("Game Objects")]
     public GameObject Player;
     public GameObject NPC;
-    public GameObject Comic;
-    public GameObject Console; // NEW
-
-    [Header("Settings")]
     public float npcDistance = 5f;
-    public float comicDistance = 5f;
-    public float consoleDistance = 5f; // NEW
-    public float typewriterSpeed = 0.05f;
-
-    [Header("Interaction Checks")]
-    public InteractionChecks interactionChecks;
+    public float typewriterSpeed = 0.05f; // Time between each character
 
     private bool inDialogue = false;
     private int dialogueStep = 0;
-    private bool nearComic = false;
-    private bool inComicDialogue = false;
-    private int comicDialogueStep = 0;
-    private bool nearConsole = false; // NEW
-    private bool inConsoleDialogue = false; // NEW
-    private int consoleDialogueStep = 0; // NEW
     private bool isTyping = false;
     private Coroutine typingCoroutine;
-    private string currentPromptText = "";
+    private string currentPromptText = ""; // Track the current prompt
 
     void Start()
     {
+        Debug.Log("Script started!");
         if (dialogueBox == null) Debug.LogError("DialogueBox is not assigned!");
         if (Player == null) Debug.LogError("Player is not assigned!");
         if (NPC == null) Debug.LogError("NPC is not assigned!");
-        if (Comic == null) Debug.LogError("Comic is not assigned!");
-        if (Console == null) Debug.LogError("Console is not assigned!"); // NEW
 
         dialogueBox.SetActive(false);
-        DialogueButton1.SetActive(false);
-        DialogueButton2.SetActive(false);
     }
 
     void Update()
     {
-        float distanceToNPC = Vector3.Distance(Player.transform.position, NPC.transform.position);
-        float distanceToComic = Vector3.Distance(Player.transform.position, Comic.transform.position);
-        float distanceToConsole = Vector3.Distance(Player.transform.position, Console.transform.position); // NEW
+        float distance = Vector3.Distance(Player.transform.position, NPC.transform.position);
+        bool nearNPC = distance <= npcDistance;
 
-        bool nearNPC = distanceToNPC <= npcDistance;
-        nearComic = distanceToComic <= comicDistance;
-        nearConsole = distanceToConsole <= consoleDistance; // NEW
+        Debug.Log("Distance to NPC: " + distance + " | Near NPC: " + nearNPC);
 
-        // NPC prompt
         if (nearNPC && !inDialogue)
         {
+            Debug.Log("Should show prompt!");
             dialogueBox.SetActive(true);
+
+            // Only start typing if we're not already showing this prompt
             if (currentPromptText != "Press Space to talk")
             {
                 currentPromptText = "Press Space to talk";
-                RestartTypewriter(currentPromptText);
+                if (typingCoroutine != null)
+                {
+                    StopCoroutine(typingCoroutine);
+                }
+                typingCoroutine = StartCoroutine(TypeText(currentPromptText));
             }
         }
-        else if (!nearNPC && !inDialogue && !nearComic && !inComicDialogue && !nearConsole && !inConsoleDialogue)
+        else if (!nearNPC && !inDialogue)
         {
-            HideDialogueUI();
+            dialogueBox.SetActive(false);
+            currentPromptText = ""; // Reset when leaving
+            if (typingCoroutine != null)
+            {
+                StopCoroutine(typingCoroutine);
+            }
         }
 
-        // Start NPC dialogue
-        if (Input.GetKeyDown(KeyCode.Space) && nearNPC && !inDialogue && !inComicDialogue && !inConsoleDialogue)
+        if (Input.GetKeyDown(KeyCode.Space) && nearNPC && !inDialogue)
         {
+            Debug.Log("Space pressed! Starting dialogue");
             dialogueBox.SetActive(true);
             inDialogue = true;
             dialogueStep = 0;
-            currentPromptText = "";
+            currentPromptText = ""; // Reset prompt tracking
             ShowDialogue();
         }
 
-        // Skip typing animation
+        // Skip typing animation if Space is pressed while typing
         if (Input.GetKeyDown(KeyCode.Space) && isTyping)
         {
             SkipTypewriter();
         }
 
-        if (inDialogue && !isTyping)
+        if (inDialogue && !isTyping) // Only allow choices when not typing
         {
-            DialogueButton1.SetActive(true);
-            DialogueButton2.SetActive(true);
+            if (Input.GetKeyDown(KeyCode.Alpha1))
+            {
+                MakeChoice(1);
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha2))
+            {
+                MakeChoice(2);
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha3))
+            {
+                MakeChoice(3);
+            }
         }
 
         if (!nearNPC && inDialogue)
         {
             EndDialogue();
         }
-
-        // Comic prompt
-        if (nearComic && !inComicDialogue && !inDialogue && !inConsoleDialogue)
-        {
-            dialogueBox.SetActive(true);
-            if (currentPromptText != "Press Space to examine comic")
-            {
-                currentPromptText = "Press Space to examine comic";
-                RestartTypewriter(currentPromptText);
-            }
-        }
-        else if (!nearComic && !inComicDialogue && !inDialogue && !nearNPC && !nearConsole && !inConsoleDialogue)
-        {
-            HideDialogueUI();
-        }
-
-        // Start comic dialogue
-        if (Input.GetKeyDown(KeyCode.Space) && nearComic && !inComicDialogue && !inDialogue && !inConsoleDialogue)
-        {
-            dialogueBox.SetActive(true);
-            inComicDialogue = true;
-            comicDialogueStep = 0;
-            currentPromptText = "";
-            ShowComicDialogue();
-        }
-
-        // Skip typewriter for comic
-        if (Input.GetKeyDown(KeyCode.Space) && isTyping && inComicDialogue)
-        {
-            SkipComicTypewriter();
-        }
-
-        if (inComicDialogue && !isTyping)
-        {
-            DialogueButton1.SetActive(true);
-            DialogueButton2.SetActive(false);
-        }
-
-        if (!nearComic && inComicDialogue)
-        {
-            EndComicDialogue();
-        }
-
-        // Console prompt (NEW)
-        if (nearConsole && !inConsoleDialogue && !inDialogue && !inComicDialogue)
-        {
-            dialogueBox.SetActive(true);
-            if (currentPromptText != "Press Space to examine console")
-            {
-                currentPromptText = "Press Space to examine console";
-                RestartTypewriter(currentPromptText);
-            }
-        }
-        else if (!nearConsole && !inConsoleDialogue && !inDialogue && !nearNPC && !nearComic && !inComicDialogue)
-        {
-            HideDialogueUI();
-        }
-
-        // Start console dialogue (NEW)
-        if (Input.GetKeyDown(KeyCode.Space) && nearConsole && !inConsoleDialogue && !inDialogue && !inComicDialogue)
-        {
-            dialogueBox.SetActive(true);
-            inConsoleDialogue = true;
-            consoleDialogueStep = 0;
-            currentPromptText = "";
-            ShowConsoleDialogue();
-        }
-
-        // Skip typewriter for console (NEW)
-        if (Input.GetKeyDown(KeyCode.Space) && isTyping && inConsoleDialogue)
-        {
-            SkipConsoleTypewriter();
-        }
-
-        if (inConsoleDialogue && !isTyping)
-        {
-            DialogueButton1.SetActive(true);
-            DialogueButton2.SetActive(false);
-        }
-
-        if (!nearConsole && inConsoleDialogue)
-        {
-            EndConsoleDialogue();
-        }
     }
-
-    #region Dialogue Logic
 
     void ShowDialogue()
     {
-        string text = dialogueStep switch
+        string text = "";
+
+        switch (dialogueStep)
         {
-            0 => "Julie: Hi!, I'm Julie. What's your name?\n\n1) Melissa\n\n2) ...",
-            1 => "Julie: Melissa! Beautiful name. I'm sure we'll get along well!",
-            2 => "Julie: Oh... okay then.",
-            3 => "Narrator: You haven't found anything to talk about, go find something interesting around the room.",
-            _ => ""
-        };
+            case 0:
+                text = "Julie: Hi!, I'm Julie. What's your name?\n\n1) Melissa\n\n2) ...";
+                break;
+            case 1:
+                text = "Julie: Melissa! Beautiful name. I'm sure we'll get along well!";
+                break;
+            case 2:
+                text = "Julie: Oh... okay then.";
+                break;
+        }
 
-        if (dialogueStep is 1 or 2 or 3)
-            StartCoroutine(DialogueEndDelay());
-
-        RestartTypewriter(text);
+        // Start typewriter effect
+        if (typingCoroutine != null)
+        {
+            StopCoroutine(typingCoroutine);
+        }
+        typingCoroutine = StartCoroutine(TypeText(text));
     }
 
-    IEnumerator DialogueEndDelay()
+    IEnumerator TypeText(string fullText)
     {
-        yield return new WaitForSeconds(8f);
-        EndDialogue();
+        isTyping = true;
+        dialogueText.text = "";
+
+        foreach (char letter in fullText)
+        {
+            dialogueText.text += letter;
+            yield return new WaitForSeconds(typewriterSpeed);
+        }
+
+        isTyping = false;
+    }
+
+    void SkipTypewriter()
+    {
+        if (typingCoroutine != null)
+        {
+            StopCoroutine(typingCoroutine);
+            typingCoroutine = null;
+        }
+        isTyping = false;
+
+        // Show full text based on current state
+        if (!inDialogue)
+        {
+            dialogueText.text = currentPromptText;
+        }
+        else
+        {
+            // Show full text based on current dialogue step
+            switch (dialogueStep)
+            {
+                case 0:
+                    dialogueText.text = "Julie: Hi!, I'm Julie. What's your name?\n\n1) Melissa\n\n2) ...";
+                    break;
+                case 1:
+                    dialogueText.text = "Julie: Melissa! Beautiful name. I'm sure we'll get along well!";
+                    break;
+                case 2:
+                    dialogueText.text = "Julie: Oh... okay then.";
+                    break;
+            }
+        }
     }
 
     void MakeChoice(int choice)
     {
         if (dialogueStep == 0)
         {
-            dialogueStep = choice == 1 ? 1 : 2;
+            if (choice == 1) dialogueStep = 1;
+            else if (choice == 2) dialogueStep = 2;
+            else if (choice == 3) dialogueStep = 3;
             ShowDialogue();
+        }
+        else if (dialogueStep == 1 || dialogueStep == 2)
+        {
+            if (choice == 1) dialogueStep = 4;
+            else if (choice == 2) dialogueStep = 5;
+            else if (choice == 3) EndDialogue();
+            ShowDialogue();
+        }
+        else if (dialogueStep == 3)
+        {
+            EndDialogue();
+        }
+        else if (dialogueStep == 4)
+        {
+            if (choice == 1) dialogueStep = 6;
+            else if (choice == 2) dialogueStep = 7;
+            else if (choice == 3) EndDialogue();
+            ShowDialogue();
+        }
+        else if (dialogueStep == 5 || dialogueStep == 6 || dialogueStep == 7)
+        {
+            EndDialogue();
         }
     }
 
     void EndDialogue()
     {
-        StopTypewriter();
+        if (typingCoroutine != null)
+        {
+            StopCoroutine(typingCoroutine);
+        }
         inDialogue = false;
         dialogueStep = 0;
         isTyping = false;
@@ -231,217 +215,4 @@ public class DialogueTest : MonoBehaviour
         dialogueText.text = "";
         currentPromptText = "";
     }
-
-    #endregion
-
-    #region Comic Logic
-
-    void ShowComicDialogue()
-    {
-        string text = comicDialogueStep switch
-        {
-            0 => "You see a comic book titled 'Space Adventures'.\n\n1) Read it",
-            1 => "You flip through the comic. The art is vibrant and the story is exciting!",
-            _ => ""
-        };
-
-        if (comicDialogueStep == 1)
-            StartCoroutine(ComicDialogueEndDelay());
-
-        RestartTypewriter(text);
-    }
-
-    IEnumerator ComicDialogueEndDelay()
-    {
-        yield return new WaitForSeconds(6f);
-        EndComicDialogue();
-    }
-
-    void MakeComicChoice(int choice)
-    {
-        if (comicDialogueStep == 0 && choice == 1)
-        {
-            comicDialogueStep = 1;
-            ShowComicDialogue();
-            if (interactionChecks != null)
-                interactionChecks.ComicBook = true;
-        }
-    }
-
-    void EndComicDialogue()
-    {
-        StopTypewriter();
-        inComicDialogue = false;
-        comicDialogueStep = 0;
-        isTyping = false;
-        dialogueBox.SetActive(false);
-        dialogueText.text = "";
-        currentPromptText = "";
-    }
-
-    #endregion
-
-    #region Console Logic
-
-    void ShowConsoleDialogue()
-    {
-        string text = consoleDialogueStep switch
-        {
-            0 => "You see a game console. It looks like it's running a cool project.\n\n1) Take a closer look",
-            1 => "Melissa: Wow, this looks really interesting! Maybe someone here would love to see this.",
-            _ => ""
-        };
-
-        if (consoleDialogueStep == 1)
-            StartCoroutine(ConsoleDialogueEndDelay());
-
-        RestartTypewriter(text);
-    }
-
-    IEnumerator ConsoleDialogueEndDelay()
-    {
-        yield return new WaitForSeconds(6f);
-        EndConsoleDialogue();
-    }
-
-    void MakeConsoleChoice(int choice)
-    {
-        if (consoleDialogueStep == 0 && choice == 1)
-        {
-            consoleDialogueStep = 1;
-            ShowConsoleDialogue();
-            if (interactionChecks != null)
-                interactionChecks.Console = true; // You may need to add this variable to InteractionChecks
-        }
-    }
-
-    void EndConsoleDialogue()
-    {
-        StopTypewriter();
-        inConsoleDialogue = false;
-        consoleDialogueStep = 0;
-        isTyping = false;
-        dialogueBox.SetActive(false);
-        dialogueText.text = "";
-        currentPromptText = "";
-    }
-
-    #endregion
-
-    #region Typewriter Logic
-
-    IEnumerator TypeText(string fullText)
-    {
-        isTyping = true;
-        dialogueText.text = "";
-        foreach (char letter in fullText)
-        {
-            dialogueText.text += letter;
-            yield return new WaitForSeconds(typewriterSpeed);
-        }
-        isTyping = false;
-    }
-
-    void RestartTypewriter(string text)
-    {
-        if (typingCoroutine != null)
-            StopCoroutine(typingCoroutine);
-        typingCoroutine = StartCoroutine(TypeText(text));
-    }
-
-    void StopTypewriter()
-    {
-        if (typingCoroutine != null)
-            StopCoroutine(typingCoroutine);
-        typingCoroutine = null;
-        isTyping = false;
-    }
-
-    void SkipTypewriter()
-    {
-        StopTypewriter();
-        if (!inDialogue && !inComicDialogue && !inConsoleDialogue)
-        {
-            dialogueText.text = currentPromptText;
-        }
-        else if (inDialogue)
-        {
-            ShowDialogue();
-        }
-        else if (inComicDialogue)
-        {
-            ShowComicDialogue();
-        }
-        else if (inConsoleDialogue)
-        {
-            ShowConsoleDialogue();
-        }
-    }
-
-    void SkipComicTypewriter()
-    {
-        StopTypewriter();
-        ShowComicDialogue();
-    }
-
-    void SkipConsoleTypewriter()
-    {
-        StopTypewriter();
-        ShowConsoleDialogue();
-    }
-
-    #endregion
-
-    #region UI Helpers
-
-    void HideDialogueUI()
-    {
-        dialogueBox.SetActive(false);
-        currentPromptText = "";
-        StopTypewriter();
-        DialogueButton1.SetActive(false);
-        DialogueButton2.SetActive(false);
-    }
-
-    #endregion
-
-    #region Button Functions
-
-    public void dialogue1()
-    {
-        if (inDialogue && !inComicDialogue && !inConsoleDialogue)
-        {
-            MakeChoice(1);
-            Debug.Log("Dialogue 1 triggered");
-        }
-    }
-
-    public void dialogue2()
-    {
-        if (inDialogue && !inComicDialogue && !inConsoleDialogue)
-        {
-            MakeChoice(2);
-            Debug.Log("Dialogue 2 triggered");
-        }
-    }
-
-    public void ComicDialogue1()
-    {
-        if (inComicDialogue && !inDialogue && !inConsoleDialogue)
-        {
-            MakeComicChoice(1);
-            Debug.Log("Comic Dialogue 1 triggered");
-        }
-    }
-
-    public void ConsoleDialogue1()
-    {
-        if (inConsoleDialogue && !inDialogue && !inComicDialogue)
-        {
-            MakeConsoleChoice(1);
-            Debug.Log("Console Dialogue 1 triggered");
-        }
-    }
-
-    #endregion
 }
