@@ -1,20 +1,15 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
+
 public class Movement : MonoBehaviour
 {
-    public Mesh forwardMesh;
-    public Mesh backMesh;
-    public Mesh sideMesh;
-    public Transform modelTransform; // Drag "Model" here
-    public Transform visualTransform; // NEW - Drag "Visual" here (the one with MeshFilter)
     public float speed;
-
-    private MeshFilter meshFilter;
-    private Rigidbody rb;
+    Rigidbody rb;
+    public Transform cameraTransform; // Assign this in the inspector
 
     void Start()
     {
-        // Get MeshFilter from Visual, not Model
-        meshFilter = visualTransform.GetComponent<MeshFilter>();
         rb = GetComponent<Rigidbody>();
     }
 
@@ -25,38 +20,18 @@ public class Movement : MonoBehaviour
 
     void Move()
     {
-        float h_input = Input.GetAxis("Horizontal") * speed;
-        float v_input = Input.GetAxis("Vertical") * speed;
-        rb.linearVelocity = new Vector3(v_input, rb.linearVelocity.y, -h_input);
+        float h_input = Input.GetAxis("Horizontal");
+        float v_input = Input.GetAxis("Vertical");
 
-        if (Mathf.Abs(h_input) > Mathf.Abs(v_input))
-        {
-            if (sideMesh != null)
-            {
-                meshFilter.mesh = sideMesh;
+        Vector3 forward = cameraTransform.forward;
+        Vector3 right = cameraTransform.right;
 
-                if (h_input < 0) // Moving left
-                {
-                    visualTransform.localRotation = Quaternion.Euler(0, 180, 0);
-                }
-                else // Moving right
-                {
-                    visualTransform.localRotation = Quaternion.Euler(0, 0, 0);
-                }
-            }
-        }
-        else if (Mathf.Abs(v_input) > 0.01f)
-        {
-            visualTransform.localRotation = Quaternion.Euler(0, 0, 0);
+        forward.y = 0f;
+        right.y = 0f;
+        forward.Normalize();
+        right.Normalize();
 
-            if (v_input > 0 && backMesh != null)
-            {
-                meshFilter.mesh = backMesh;
-            }
-            else if (v_input < 0 && forwardMesh != null)
-            {
-                meshFilter.mesh = forwardMesh;
-            }
-        }
+        Vector3 moveDirection = (forward * v_input + right * h_input) * speed;
+        rb.linearVelocity = new Vector3(moveDirection.x, rb.linearVelocity.y, moveDirection.z);
     }
 }
