@@ -10,4 +10,12 @@ public class InteractionChecks : MonoBehaviour
         ComicBook = false;
         Console = false;
     }
+    public void SetComicTrue()
+    {
+        ComicBook = true;
+    }
+    public void SetConsoleTrue()
+    {
+        Console = true;
+    }
 }
