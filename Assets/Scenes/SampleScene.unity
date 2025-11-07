@@ -9201,7 +9201,7 @@ GameObject:
   - component: {fileID: 2001013794}
   - component: {fileID: 2001013793}
   m_Layer: 0
-  m_Name: Dialogue_Manager_Julie
+  m_Name: Dialogue_Manager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
